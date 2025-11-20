@@ -3,10 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Topicos App</title>
+    <title>Topicos - Prueba TikTok</title>
 </head>
 <body>
-<h1>Bienvenido a la App Topicos</h1>
-<p>Esta es la página principal usada para pruebas con TikTok Developers.</p>
+    <h1>Bienvenido a la App Topicos</h1>
+    <p>Prueba de integración con TikTok Developers (Sandbox)</p>
+
+    <!-- Botón Login con TikTok -->
+    <button id="loginBtn">Login con TikTok</button>
+    <p id="loginStatus"></p>
+
+    <!-- Botón para generar video de prueba -->
+    <button id="generateVideoBtn" disabled>Generar Video de Prueba</button>
+    <video id="videoPreview" width="320" height="240" controls></video>
+
+    <!-- Botón para subir video -->
+    <button id="uploadBtn" disabled>Subir a TikTok (Sandbox)</button>
+    <p id="uploadStatus"></p>
+
+    <script>
+        // ⚡ Configuración (coloca aquí tus credenciales de sandbox)
+        const clientKey = "TU_CLIENT_KEY"; // desde TikTok Developers
+        const redirectUri = "https://jhamilperedo.github.io/topicos-app/"; // tu GitHub Pages
+
+        let accessToken = null;
+        let videoFile = null;
+
+        // ===== Login Kit =====
+        document.getElementById("loginBtn").addEventListener("click", () => {
+            const authUrl = `https://sandbox.tiktok.com/auth/authorize?client_key=${clientKey}&response_type=token&scope=user.info.basic,video.upload,video.list&redirect_uri=${encodeURIComponent(redirectUri)}&state=123`;
+            window.location.href = authUrl;
+        });
+
+        // ===== Detectar token en URL (Login Kit) =====
+        window.addEventListener("load", () => {
+            const hash = window.location.hash;
+            if (hash.includes("access_token")) {
+                const params = new URLSearchParams(hash.replace("#","?"));
+                accessToken = params.get("access_token");
+                document.getElementById("loginStatus").innerText = "Login exitoso! Token recibido.";
+                document.getElementById("generateVideoBtn").disabled = false;
+            }
+        });
+
+        // ===== Generar video de prueba =====
+        document.getElementById("generateVideoBtn").addEventListener("click", () => {
+            // Para prueba usamos un video local o un blob simulado
+            fetch("https://sample-videos.com/video123/mp4/240/big_buck_bunny_240p_1mb.mp4")
+                .then(res => res.blob())
+                .then(blob => {
+                    videoFile = blob;
+                    const url = URL.createObjectURL(blob);
+                    document.getElementById("videoPreview").src = url;
+                    document.getElementById("uploadBtn").disabled = false;
+                });
+        });
+
+        // ===== Subir video (Content Posting API) =====
+        document.getElementById("uploadBtn").addEventListener("click", async () => {
+            if (!accessToken || !videoFile) {
+                alert("Primero inicia sesión y genera un video");
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("video_file", videoFile);
+            formData.append("text", "Video de prueba desde Topicos Sandbox");
+
+            try {
+                const res = await fetch("https://sandbox.tiktok.com/open_api/v1/video/upload/", {
+                    method: "POST",
+                    headers: {
+                        "Access-Token": accessToken
+                    },
+                    body: formData
+                });
+                const data = await res.json();
+                console.log(data);
+                document.getElementById("uploadStatus").innerText = "Video subido correctamente en Sandbox!";
+            } catch (err) {
+                console.error(err);
+                document.getElementById("uploadStatus").innerText = "Error al subir video.";
+            }
+        });
+    </script>
 </body>
 </html>
